@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="//unpkg.com/alpinejs" defer></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
+        audio {
+            width: 100%;
+        }
+
+        ul {
+            margin-top: 2rem;
+            max-height: 70vh;
+            overflow: auto;
+        }
+
+        li {
+            display: flex;
+            gap: .5rem;
+            align-items: baseline;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        .mt-1 {
+            margin-top: 1rem;
+        }
+
+        .mb-4 {
+            margin-bottom: 4rem;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .select-block {
+            max-width: 15rem;
+            padding-left: 20px;
+            padding-right: 20px;
+            margin-bottom: 2rem;
+        }
+
+        .body-padding-y {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+
+        .center-content {
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+    <title>Audio to Video</title>
+</head>
+
+<body class="container body-padding-y">
+
+    <hgroup class="text-center mb-4">
+        <h1>
+            Audio to Video
+        </h1>
+        <h2>Easily create 📹 video from 🔊 audio</h2>
+    </hgroup>
+
+    <details open>
+        <summary>🤔 Why?</summary>
+        <p>
+            For some type of videos the audio is the most important part.
+            Think of motivational videos, talking videos about some topic,
+            basically any video where the visuals just needs to "vibe" along with the audio.
+        </p>
+    </details>
+
+    <details class="mb-4">
+        <summary>💡 How it works?</summary>
+        <p>
+
+        <ul>
+            <li class="mt-1"><strong>1. Add Keywords</strong></li>
+            <li>
+                Add some keywords which best describe this video.
+                These keywords will be used to find matching videos.
+                The longer the audio file the more keywords you need to provide.
+            </li>
+
+            <li class="mt-1"><strong>2. Upload Audio</strong></li>
+            <li>
+                Upload the audio file. These are the accepted audio file formats: .flac,
+                .mp3, .wav, .ogg, .wma.
+            </li>
+
+            <li class="mt-1"><strong>3. Download Videos</strong></li>
+            <li>
+                Once ready you can download the resulted videos which will be available in a zip file.
+                You will have the desktop video (Youtube, Vimeo etc) and the mobile video (for TikTok, Youtube Shorts
+                etc).
+            </li>
+        </ul>
+
+        </p>
+    </details>
+
+    <div x-data="uploadAudioData">
+
+        <div x-cloak x-show="files == null">
+            <label>
+                Add a few keywords which can best describe the video or a text script:
+                <input type="text" x-model="audioDescription"
+                    placeholder="joyful, upbeat, corporate, meeting, tech, programing">
+            </label>
+            <label>
+                <input id="audiofile" x-on:input="files = Object.values($event.target.files); uploadAudio();"
+                    type="file" x-bind:disabled="!audioDescription">
+            </label>
+        </div>
+
+        <div x-cloak x-show="files != null && videoNotReady == true">
+            <p x-bind:aria-busy="videoNotReady" x-text="currentStep"></p>
+        </div>
+
+        <div class="center-content">
+            <div x-cloak x-show="files != null && videoNotReady == false">
+                <a x-bind:href="downloadVideosUrl" x-on:click="resetState" role="button" class="secondary">
+                    🤖 Videos ready! Click to download! 📥
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+
+    <script defer>
+
+        function uploadAudioData() {
+            return {
+                files: null,
+                eventId: null,
+                videoNotReady: true,
+                currentStep: null,
+                audioDescription: null,
+                uploadUrl: document.location.origin + "/upload-audio",
+                processUrl: document.location.origin + "/process",
+                downloadVideosUrl: null,
+                resetState: function () {
+                    this.files = null;
+                    this.videoNotReady = true;
+                    this.eventId = null;
+                    this.audioDescription = null;
+                    document.getElementById("audiofile").value = "";
+                },
+                uploadAudio: async function () {
+                    if (!this.files) return
+                    if (!this.audioDescription) return
+
+                    this.currentStep = "Uploading audio file...";
+
+                    const formData = new FormData();
+                    formData.append('audio_file', this.files[0]);
+
+                    let response = await fetch(this.uploadUrl, {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    let data = await response.json();
+
+                    if (response.status == 200) {
+
+                        let triggerResponse = await fetch(this.processUrl, {
+                            method: "POST",
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(
+                                {
+                                    "event_id": data['eventId'],
+                                    "audio_description": this.audioDescription,
+                                }
+                            )
+                        })
+                    }
+
+                    this.currentStep = "Processing started";
+                    this.eventId = data['eventId'];
+                    this.downloadVideosUrl = `${document.location.origin}/download/${this.eventId}`;
+
+                    if (!this.eventId) {
+                        location.reload();
+                    }
+
+                    let interval = setInterval(async (url, self) => {
+
+                        let response = await fetch(url);
+                        let data = await response.json();
+
+                        self.currentStep = data["status"];
+
+                        if (response.status == 500) {
+                            clearInterval(interval);
+                            location.reload();
+                        }
+
+                        if (response.status == 200) {
+                            self.videoNotReady = false;
+                            clearInterval(interval);
+                        }
+
+                    }, 2000, `${document.location.origin}/status/${this.eventId}`, this);
+
+                }
+            }
+        }
+
+    </script>
+
+</body>
+
+</html>
