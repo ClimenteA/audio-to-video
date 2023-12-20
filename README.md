@@ -20,11 +20,24 @@ If you provide the text script you used for the audio the app will download vide
 ![ui](./ui.png)
 
 
-After you provide the keywords and upload the audio the app will do the folliwing:
+After you provide the keywords and upload the audio the app will do the following:
 - remove silence from audio provided;
 - start downloading videos from pexels;
 - ensure that there is enough video for audio provided;
 - merging videos into one;
 - adding audio to that video;
 - making the mobile video format;
-- making the zip;
+- making the zip available for download;
+
+
+## Whishlist
+
+With all the tehnologies we have today this could be a verry interesting project. 
+But, it's all just soo damn expensive to run because of the need for GPU power and some expensive API's... 
+ 
+- with the use of some captions api the need to add keywords to create video from audio will not be necessary;
+- some ML for analysing sentiment on captions;
+- connect to paid stock videos APIs in order to have a more options on selecting relevant videos;
+- ui to modify video after it's finished (switch video segment, add text/images overlays);
+
+
